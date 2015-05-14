@@ -1,0 +1,128 @@
+---
+title: "Machine Learning Project"
+output: html_document
+---
+
+###Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+###Data Uploading
+
+The training data for this project are available [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv): 
+
+The test data are available [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har.
+
+So first we download data:
+
+```{r,,echo=TRUE, eval=FALSE}
+url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(url, "ML_train.csv", method="curl")
+url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url, "ML_test.csv", method="curl")
+```
+
+And load it into R:
+
+```{r, echo=TRUE}
+train <- read.csv("ML_train.csv", header=TRUE, na.strings=c("", "NA", "#DIV/0!"))
+test <- read.csv("ML_test.csv", header=TRUE, na.strings=c("", "NA", "#DIV/0!"))
+```
+
+###Data Preprocess
+
+First of all we need to separate "train" data into really train and validation data:
+
+
+```{r, echo=TRUE}
+library(caret)
+set.seed(9999)
+index <- createDataPartition(train$classe, p = 0.75, list = FALSE)
+Train <- train[index, ]
+Validat <- train[-index, ]
+```
+
+###Feature Selection
+
+First we will find features with near zero variance and delete them from training set because they are useless.
+
+```{r, echo=TRUE}
+temp <- nearZeroVar(Train)
+Train <- Train[, -temp]
+```
+
+Next we are going to delete all text features that dont contain some feature information:
+
+
+```{r, echo=TRUE}
+textFeatures <- c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")
+Train <- Train[, !names(Train) %in% textFeatures]
+```
+
+Also we see that there are many NA in our dataset. Lets remove all columns that have 50% + NAs:
+
+```{r, echo=TRUE}
+temp <- sapply(Train, function(x) {sum(!(is.na(x) | x == "")) })
+nas <- names(temp[temp < 0.5 * length(Train[,ncol(Train)])])
+Train <- Train[, !names(Train) %in% nas]
+dim(Train)
+```
+
+###Creating Model
+
+To create the model i choose random forest algorithm. Lets create our model:
+
+```{r, echo=TRUE}
+library(randomForest)
+ntrees <- 501
+modelFit <- randomForest(classe ~ ., data = Train, importance = TRUE, ntrees = ntrees)
+```
+
+
+###Validation
+
+####Training set accuracy
+
+Now lets compute misclassification of the model at training set and compute the accuracy.
+
+```{r, echo=TRUE}
+training <- predict(modelFit, Train)
+print(confusionMatrix(training, Train$classe))
+```
+
+So the accuracy at training set is looking very high. But we need to look at results at validation set to avoid overfitting:
+
+####Validation set accuracy
+
+```{r, echo=TRUE}
+validation <- predict(modelFit, Validat)
+print(confusionMatrix(validation, Validat$classe))
+```
+
+So we still have very high accuracy results (accuracy=99,57%) and now we can predict classes for train data.
+
+###Prediction
+
+```{r, echo=TRUE}
+testing <- predict(modelFit, test)
+testing
+```
+
+Now we have predictions. And next step is making from it separate files and downloading them at submission page.
+
+```{r, echo=TRUE, eval=FALSE}
+answers <- as.vector(testing)
+pml_write_files = function(x) {
+    n = length(x)
+    for (i in 1:n) {
+        filename = paste0("problem_id_", i, ".txt")
+        write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, 
+                    col.names = FALSE)
+    }
+}
+
+pml_write_files(answers)
+```
+
