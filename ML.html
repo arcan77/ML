@@ -110,12 +110,13 @@ dim(Train)</code></pre>
 </div>
 <div id="creating-model" class="section level3">
 <h3>Creating Model</h3>
-<p>To create the model i choose random forest algorithm. Lets create our model:</p>
+<p>To create the model i choose random forest algorithm. Lets create our model using repeated cross-validation training option to estimate the error appropriately:</p>
 <pre class="r"><code>library(randomForest)</code></pre>
 <pre><code>## randomForest 4.6-10
 ## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 <pre class="r"><code>ntrees &lt;- 501
-modelFit &lt;- randomForest(classe ~ ., data = Train, importance = TRUE, ntrees = ntrees)</code></pre>
+cvCtrl &lt;- trainControl(method=&quot;repeatedcv&quot;, number=2, repeats=5, summaryFunction = twoClassSummary,classProbs = TRUE)
+modelFit &lt;- randomForest(classe ~ ., data = Train, importance = TRUE, trControl =cvCtrl, ntrees = ntrees)</code></pre>
 </div>
 <div id="validation" class="section level3">
 <h3>Validation</h3>

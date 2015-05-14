@@ -72,12 +72,13 @@ dim(Train)
 
 ###Creating Model
 
-To create the model i choose random forest algorithm. Lets create our model:
+To create the model i choose random forest algorithm. Lets create our model using repeated cross-validation training option to estimate the error appropriately:
 
 ```{r, echo=TRUE}
 library(randomForest)
 ntrees <- 501
-modelFit <- randomForest(classe ~ ., data = Train, importance = TRUE, ntrees = ntrees)
+cvCtrl <- trainControl(method="repeatedcv", number=2, repeats=5, summaryFunction = twoClassSummary,classProbs = TRUE)
+modelFit <- randomForest(classe ~ ., data = Train, importance = TRUE, trControl =cvCtrl, ntrees = ntrees)
 ```
 
 
